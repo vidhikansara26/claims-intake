@@ -236,10 +236,13 @@ def submit_notification(
         )
 
     policy = _policy_from_record(record)
-    for rule in POLICY_RULES:
-        outcome = rule(notification, policy)
-        if not outcome.passed:
-            return outcome
+    failure = evaluate_notification(notification, policy)
+    if failure is not None:
+        for rule in POLICY_RULES:
+            outcome = rule(notification, policy)
+            if not outcome.passed:
+                return outcome
+
 
     existing = repository.find_matching(
         notification.policy_number,
