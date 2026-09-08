@@ -12,35 +12,52 @@ Day 2 assignment. Implement against `docs/api-contract.md` section 3.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 
-from claims.models import RecordedNotification
+from claims.models import ClaimRecord, ClaimType
 
 
 class NotificationRepository:
-    """Stores recorded notifications and issues claim references."""
+    """Stores claim records and issues claim references."""
 
     def __init__(self) -> None:
-        raise NotImplementedError("Day 2 assignment")
+        self._records: list[ClaimRecord] = []
+        self._next_sequence: int = 1
 
-    def record(self, notification: object) -> RecordedNotification:
-        """Write a notification and return it with its issued claim reference.
+    def issue_claim_reference(self) -> str:
+        """Return the next unused reference. Format is contract section 3."""
+        year = datetime.now(UTC).year
+        sequence = self._next_sequence
+        self._next_sequence += 1
+        return f"CLM-{year}-{sequence:06d}"
 
-        The reference format is fixed by contract section 3. References are unique
-        and are never reissued.
+    def record(self, claim: ClaimRecord) -> ClaimRecord:
+        """Persist a claim record. The reference is already on the record.
+
+        Accepts `ClaimRecord` and not `NotificationRequest` so a refused
+        submission cannot be written: it never became a claim record
+        (WI-0151 AC-3). Duplicate detection stays in `find_matching`.
         """
-        raise NotImplementedError("Day 2 assignment")
+        self._records.append(claim)
+        return claim
 
     def find_matching(
         self,
         policy_number: str,
         loss_date: date,
-        claim_type: str,
-    ) -> RecordedNotification | None:
-        """Return an existing recorded notification matching all three values.
+        claim_type: ClaimType,
+    ) -> ClaimRecord | None:
+        """Return an existing claim record matching all three values.
 
         `WI-0151` AC-1 fixes which fields constitute a match. AC-3 is the reason
-        this searches recorded notifications only: a submission that was refused
-        was never written, so there is nothing for a later one to duplicate.
+        this searches recorded claims only: a submission that was refused never
+        became a `ClaimRecord`, so there is nothing for a later one to duplicate.
         """
-        raise NotImplementedError("Day 2 assignment")
+        for recorded in self._records:
+            if (
+                recorded.policy_number == policy_number
+                and recorded.loss_date == loss_date
+                and recorded.claim_type == claim_type
+            ):
+                return recorded
+        return None

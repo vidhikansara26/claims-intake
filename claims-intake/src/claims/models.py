@@ -10,7 +10,24 @@ Day 2 assignment. Implement these against `docs/api-contract.md` sections 2 and 
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+import re
+from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+ClaimType = Literal["collision", "theft", "glass", "liability", "weather"]
+_CALENDAR_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _require_two_decimal_places(value: Decimal) -> Decimal:
+    """Scale is part of the money field, not a display choice."""
+    exponent = value.as_tuple().exponent
+    if exponent != -2:
+        raise ValueError("Expected two decimal places")
+    return value
 
 
 class NotificationRequest(BaseModel):
@@ -26,7 +43,28 @@ class NotificationRequest(BaseModel):
     one, is Day 2's work.
     """
 
-    policy_number: str
+    model_config = ConfigDict(extra="forbid")
+
+    policy_number: str = Field(min_length=1)
+    loss_date: date
+    claim_type: ClaimType
+    estimated_amount: Decimal = Field(gt=0)
+    description: str | None = None
+
+    @field_validator("loss_date", mode="before")
+    @classmethod
+    def loss_date_is_a_calendar_date(cls, value: object) -> object:
+        # Section 2.2: calendar date, YYYY-MM-DD.
+        if isinstance(value, datetime):
+            raise ValueError("loss_date is a calendar date, not a datetime")
+        if isinstance(value, str) and _CALENDAR_DATE.fullmatch(value) is None:
+            raise ValueError("loss_date must be YYYY-MM-DD")
+        return value
+
+    @field_validator("estimated_amount")
+    @classmethod
+    def estimated_amount_is_exact_cents(cls, value: Decimal) -> Decimal:
+        return _require_two_decimal_places(value)
 
 
 class Policy(BaseModel):
@@ -35,15 +73,60 @@ class Policy(BaseModel):
     Built from the `PolicyRecord` the policy client returns. The fields the rules
     compare against are the reason this model exists.
 
-    Day 2 assignment: declare the fields.
+    `cancellation_date` is `date | None` with no default so a comparison against
+    it without first handling absence fails type checking (WI-0158 AC-3).
     """
 
+    model_config = ConfigDict(extra="forbid")
 
-class RecordedNotification(BaseModel):
-    """A notification that passed every rule and was written.
+    policy_number: str = Field(min_length=1)
+    product: str
+    effective_date: date
+    expiry_date: date
+    cancellation_date: date | None
+    limit: Decimal = Field(gt=0)
+    permitted_claim_types: tuple[ClaimType, ...]
+
+    @field_validator("limit")
+    @classmethod
+    def limit_is_exact_cents(cls, value: Decimal) -> Decimal:
+        return _require_two_decimal_places(value)
+
+
+@dataclass(frozen=True)
+class RuleFailure:
+    """A failed rule, with the two identifiers kept as separate fields.
+
+    `rule` is the table id (`V-2`). `code` is the caller-visible contract code
+    (`LOSS_BEFORE_INCEPTION`). They are distinct so a rule id cannot be passed
+    where a code is expected.
+    """
+
+    rule: str
+    code: str
+
+
+class ClaimRecord(BaseModel):
+    """A claim record: a notification that passed every rule and was written.
+
+    Named for the record the handler quotes, not for the request that produced
+    it. A payload that failed the model never becomes a `ClaimRecord`, so the
+    repository has nothing it can persist for a rejection (WI-0151 AC-3).
 
     Carries the claim reference issued at the time it was recorded. Contract
     section 3 fixes the reference format.
-
-    Day 2 assignment: declare the fields.
     """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    claim_reference: str = Field(pattern=r"^CLM-\d{4}-\d{6}$")
+    policy_number: str = Field(min_length=1)
+    loss_date: date
+    claim_type: ClaimType
+    estimated_amount: Decimal = Field(gt=0)
+    description: str | None = None
+
+    @field_validator("estimated_amount")
+    @classmethod
+    def estimated_amount_is_exact_cents(cls, value: Decimal) -> Decimal:
+        return _require_two_decimal_places(value)
