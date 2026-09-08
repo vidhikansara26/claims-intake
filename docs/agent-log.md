@@ -15,3 +15,11 @@
 **Decision.** Reject that signature. Use `evaluate_notification(notification, policy) -> RuleFailure | None`. Catch only `PolicyNotFound` in `submit_notification`, as V-1. Do not catch `PolicyLookupFailed`.
 
 **Reason.** Contract section 6: the master answering with no match is `POLICY_NOT_FOUND` / 422; timeout, unreachable, and unparsable are 504 / 503 / 502. If `evaluate_notification` owned `get_policy` and caught lookup failure with `PolicyNotFound`, `submit_notification` would report that the policy does not exist when the service does not know, and the three-reason propagation tests would fail. WI-0142 AC-4 also requires that a missing policy is not evaluated as V-2; that conversion belongs at the client boundary, not inside the pure rule table.
+
+## Gate observation
+
+**Change.** On pull request https://github.com/vidhikansara26/claims-intake/pull/1, (`test: fail ruff on purpose to observe the merge gate`) made the GitHub Actions job `checks` complete with conclusion `failure`. That commit was then reverted.
+
+**Decision.** Do not add `continue-on-error` or extra jobs. Report the merge behaviour.
+
+**Reason.** Assignment step 8: observe whether a failing required check blocked merge. What I saw: the `checks` run was marked red, and merge was not blocked. After the revert, the pull request is `mergeable_state: clean`. Branch protection does not require this check. That is a repository-configuration finding, not a workflow defect.
