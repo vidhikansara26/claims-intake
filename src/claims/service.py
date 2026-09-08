@@ -266,4 +266,3 @@ def submit_notification(
     )
     recorded = repository.record(claim)
     return ValidationOutcome(passed=True, claim_reference=recorded.claim_reference)
-import json
