@@ -55,7 +55,7 @@ class NotificationRequest(BaseModel):
     @classmethod
     def loss_date_is_a_calendar_date(cls, value: object) -> object:
         # Section 2.2: calendar date, YYYY-MM-DD.
-        if isinstance(value, datetime):
+        if type(value) is datetime:
             raise ValueError("loss_date is a calendar date, not a datetime")
         if isinstance(value, str) and _CALENDAR_DATE.fullmatch(value) is None:
             raise ValueError("loss_date must be YYYY-MM-DD")
