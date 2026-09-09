@@ -19,8 +19,8 @@ CLAIM_REFERENCE = re.compile(r"^CLM-\d{4}-\d{6}$")
 
 def _payload(payload_id: str) -> dict[str, Any]:
     for filename in ("fnol_valid.json", "fnol_invalid.json", "fnol_edge.json"):
-        enteries = json.loads((DATA_DIR / filename).read_text())
-        for entry in enteries:
+        entries = json.loads((DATA_DIR / filename).read_text())
+        for entry in entries:
             if entry["id"] == payload_id:
                 return dict(cast(dict[str, Any], entry["payload"]))
     raise KeyError(f"No entry found for {payload_id}")
