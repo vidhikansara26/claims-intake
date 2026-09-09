@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Any, Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -25,7 +25,7 @@ from claims.policy_client import (
     StubPolicyClient,
 )
 from claims.repository import NotificationRepository
-from claims.service import ValidationOutcome, submit_notification
+from claims.service import submit_notification
 
 app = FastAPI(title="Claims Intake Service")
 

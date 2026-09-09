@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator, cast
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
 
 from claims.api.routes import app, get_policy_client, get_repository
-from claims.policy_client import StubPolicyClient, LookupFailureReason
+from claims.policy_client import LookupFailureReason, StubPolicyClient
 from claims.repository import NotificationRepository
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
